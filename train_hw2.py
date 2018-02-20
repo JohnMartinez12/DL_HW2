@@ -144,6 +144,9 @@ X_train, y_train = get_train_data(data_root_path) # this may take a few minutes
 y_train = one_hot(y_train).T
 X_train = X_train.T
 X_train = (X_train - np.mean(X_train,axis=0)) / np.std(X_train,axis=0)
+# Load test data
+X_test = get_images(data_root_path + 'test').T
+
 print("Data loading done.")
 
 
@@ -287,18 +290,21 @@ def show_progress(epoch, feed_dict_train, feed_dict_validate, val_loss):
 
 total_iterations = 0
 
-saver = tf.train.Saver()
+# Getting fixed validation data 
+x_valid_batch, y_valid_batch = get_batch(X_train, y_train, batch_size)
+x_valid_batch = x_valid_batch.reshape((batch_size, 32, 32, 3))
+
+classes = ('airplane','automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+
 def train(num_iteration):
     global total_iterations
+    global X_test
     
     for i in range(total_iterations,
                    total_iterations + num_iteration):
         
         x_batch, y_true_batch = get_batch(X_train, y_train, batch_size)
         x_batch = x_batch.reshape((batch_size, 32, 32, 3))
-        
-        x_valid_batch, y_valid_batch = get_batch(X_train, y_train, batch_size)
-        x_valid_batch = x_valid_batch.reshape((batch_size, 32, 32, 3))
         
         
         feed_dict_tr = {x: x_batch,
@@ -316,6 +322,21 @@ def train(num_iteration):
             show_progress(epoch, feed_dict_tr, feed_dict_val, val_loss)
 
 
-    total_iterations += num_iteration
+    
+    X_test = X_test.reshape((5000,32,32,3))
+    pred = session.run(y_pred_cls, feed_dict = {x: X_test})
+    
+    file = open("test_submit.csv", "w")
+    file.write("id,label\n")
+    
+    for i in range(len(pred)):
+        
+        print(pred[i])
+        
+        row = str(i+1) + ","+ classes[pred[i]] + '\n'
+        file.write(row)
+    
+    file.close()
+    
 
 train(num_iteration=7000)
